@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
+from app.api.v1 import auth
 
 
 @asynccontextmanager
@@ -24,6 +25,8 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["health"])
     async def health_check() -> dict[str, str]:  # type: ignore
         return {"status": "ok"}
+
+    app.include_router(auth.router)
 
     return app
 
