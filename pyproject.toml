@@ -1,0 +1,7 @@
+[project]
+name = "ai-vacation-planner-api"
+version = "0.1.0"
+description = "An intelligent assistant that helps users plan trips end-to-end using conversational AI."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
