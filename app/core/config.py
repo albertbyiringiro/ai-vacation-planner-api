@@ -17,10 +17,12 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
+    database_url: str
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings() # type: ignore
+    return Settings()  # type: ignore
 
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
