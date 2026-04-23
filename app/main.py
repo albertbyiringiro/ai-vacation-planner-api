@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
-from app.api.v1 import auth
+from app.api.v1 import auth, trip
 
 
 @asynccontextmanager
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(auth.router)
+    app.include_router(trip.router)
 
     return app
 
