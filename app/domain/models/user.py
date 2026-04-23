@@ -1,13 +1,7 @@
 from datetime import datetime, timezone
-import enum
-
+from sqlmodel import SQLModel, Field
+from sqlalchemy import func
 from pydantic import EmailStr
-from sqlmodel import Field, SQLModel
-
-
-class UserRole(str, enum.Enum):
-    user = "user"
-    admin = "admin"
 
 
 class UserBase(SQLModel):
@@ -19,7 +13,15 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     hashed_password: str
-    role: UserRole = Field(default=UserRole.user)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    role: str = Field(default="user")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column_kwargs={"server_default": func.now()},
+        nullable=False,
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column_kwargs={"server_default": func.now(), "onupdate": func.now()},
+        nullable=False,
+    )
     deleted_at: datetime | None = None
