@@ -14,7 +14,7 @@ class TripStyle(str, enum.Enum):
 
 class TripBase(SQLModel):
     destination: str
-    days: int = Field(ge=1, le=30)
+    days: int = Field(ge=1)
     budget: float = Field(gt=0)
     trip_style: TripStyle
 
