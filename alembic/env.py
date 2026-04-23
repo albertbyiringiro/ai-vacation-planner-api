@@ -8,7 +8,7 @@ from alembic import context
 from alembic.autogenerate.api import AutogenContext
 from sqlmodel import SQLModel
 
-from app.domain.models.user import User  # type: ignore
+from app.domain.models.user import User  # noqa: E501 # type: ignore
 
 
 # this is the Alembic Config object, which provides

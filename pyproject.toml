@@ -5,6 +5,7 @@ description = "An intelligent assistant that helps users plan trips end-to-end u
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "alembic>=1.18.4",
     "fastapi>=0.136.0",
     "pwdlib[argon2]>=0.3.0",
