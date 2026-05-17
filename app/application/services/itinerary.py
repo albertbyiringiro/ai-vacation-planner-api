@@ -77,3 +77,28 @@ class ItineraryService:
 
     async def get(self, itinerary_id: int, user_id: int) -> Itinerary:
         return await self._get_own_itinerary(itinerary_id, user_id)
+
+    async def update(
+        self, itinerary_id: int, user_id: int, data: ItineraryUpdate
+    ) -> Itinerary:
+        itinerary = await self._get_own_itinerary(itinerary_id, user_id)
+
+        if data.days is not None:
+            trip = await self._get_own_trip(itinerary.trip_id, user_id)
+            day_numbers = [d.day for d in data.days]
+            if max(day_numbers) > trip.days:
+                raise ValueError(
+                    f"Itinerary day {max(day_numbers)} exceeds trip duration ({trip.days} days)"
+                )
+            if len(set(day_numbers)) != len(day_numbers):
+                raise ValueError("Duplicate day numbers in itinerary")
+            itinerary.data = {"days": [d.model_dump() for d in data.days]}
+
+        if data.name is not None:
+            itinerary.name = data.name
+
+        itinerary.updated_at = datetime.now(timezone.utc)
+        self.session.add(itinerary)
+        await self.session.commit()
+        await self.session.refresh(itinerary)
+        return itinerary
