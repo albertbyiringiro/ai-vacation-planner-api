@@ -106,5 +106,14 @@ async def get_current_active_user(
     return current_user
 
 
-# ─── Type alias for protected endpoints ───────────────────────────
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
+
+
+async def get_current_user_id(current_user: CurrentUser):
+    if current_user.id is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+
+    return current_user.id
+
+
+UserId = Annotated[int, Depends(get_current_user_id)]

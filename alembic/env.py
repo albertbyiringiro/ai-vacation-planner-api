@@ -10,7 +10,7 @@ from sqlmodel import SQLModel
 
 from app.domain.models.user import User  # noqa: E501 # type: ignore
 from app.domain.models.trip import Trip  # noqa: E501 # type: ignore
-
+from app.domain.models.itinerary import Itinerary  # type: ignore # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
