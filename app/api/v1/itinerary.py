@@ -7,7 +7,7 @@ from app.application.schemas.itinerary import (
     ItineraryResponse,
     ItineraryUpdate,
 )
-from app.application.services.itinerary import ItineraryService
+from app.application.services.itinerary import ConflictError, ItineraryService
 
 router = APIRouter(tags=["itineraries"])
 
@@ -33,6 +33,8 @@ async def create_itinerary(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ConflictError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -88,6 +90,8 @@ async def update_itinerary(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ConflictError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
 
