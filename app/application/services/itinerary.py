@@ -102,3 +102,18 @@ class ItineraryService:
         await self.session.commit()
         await self.session.refresh(itinerary)
         return itinerary
+
+    async def activate(self, itinerary_id: int, user_id: int) -> None:
+        """Set the given itinerary as the active one for its trip, deactivating all others."""
+        itinerary = await self._get_own_itinerary(itinerary_id, user_id)
+
+        await self.session.execute(
+            update(Itinerary)
+            .where(Itinerary.trip_id == itinerary.trip_id)  # type: ignore[arg-type]
+            .values(is_active=False)
+        )
+
+        itinerary.is_active = True
+        itinerary.updated_at = datetime.now(timezone.utc)
+        self.session.add(itinerary)
+        await self.session.commit()
