@@ -63,3 +63,14 @@ class ItineraryService:
         await self.session.commit()
         await self.session.refresh(itinerary)
         return itinerary
+
+    async def list_for_trip(
+        self, trip_id: int, user_id: int, active_only: bool = False
+    ) -> list[Itinerary]:
+        await self._get_own_trip(trip_id, user_id)
+        stmt = select(Itinerary).where(Itinerary.trip_id == trip_id)
+        if active_only:
+            stmt = stmt.where(Itinerary.is_active == True)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+    
