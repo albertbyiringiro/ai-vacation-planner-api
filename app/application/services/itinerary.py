@@ -23,3 +23,14 @@ class ItineraryService:
         if trip is None:
             raise KeyError("Trip not found or access denied")
         return trip
+
+    async def _get_own_itinerary(self, itinerary_id: int, user_id: int) -> Itinerary:
+        result = await self.session.execute(
+            select(Itinerary).where(Itinerary.id == itinerary_id)
+        )
+
+        itinerary = result.scalar_one_or_none()
+        if itinerary is None:
+            raise KeyError("Itinerary not found")
+        await self._get_own_trip(itinerary.trip_id, user_id)
+        return itinerary
