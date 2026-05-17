@@ -34,3 +34,32 @@ class ItineraryService:
             raise KeyError("Itinerary not found")
         await self._get_own_trip(itinerary.trip_id, user_id)
         return itinerary
+
+    async def create(
+        self, trip_id: int, user_id: int, data: ItineraryCreate
+    ) -> Itinerary:
+        """
+        Create a new itinerary for a given trip.
+        Validates that all days in the itinerary fit within the trip duration
+        and that there are no duplicate day numbers.
+        """
+        trip = await self._get_own_trip(trip_id, user_id)
+
+        day_numbers = [d.day for d in data.days]
+        if max(day_numbers) > trip.days:
+            raise ValueError(
+                f"Itinerary day {max(day_numbers)} exceeds trip duration {trip.days} days"
+            )
+        if len(set(day_numbers)) != len(day_numbers):
+            raise ValueError("Duplicate day numbers in itinerary")
+
+        itinerary = Itinerary(
+            trip_id=trip_id,
+            name=data.name,
+            is_active=False,
+            data={"days": [d.model_dump() for d in data.days]},
+        )
+        self.session.add(itinerary)
+        await self.session.commit()
+        await self.session.refresh(itinerary)
+        return itinerary
