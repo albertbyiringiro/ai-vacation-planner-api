@@ -117,3 +117,9 @@ class ItineraryService:
         itinerary.updated_at = datetime.now(timezone.utc)
         self.session.add(itinerary)
         await self.session.commit()
+
+    async def delete(self, itinerary_id: int, user_id: int) -> None:
+        itinerary = self._get_own_itinerary(itinerary_id, user_id)
+
+        await self.session.delete(itinerary)
+        await self.session.commit()
