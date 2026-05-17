@@ -74,3 +74,6 @@ class ItineraryService:
             stmt = stmt.where(Itinerary.is_active == True)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get(self, itinerary_id: int, user_id: int) -> Itinerary:
+        return await self._get_own_itinerary(itinerary_id, user_id)
