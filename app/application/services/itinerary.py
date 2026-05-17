@@ -1,10 +1,15 @@
 from datetime import datetime, timezone
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, update
 
 from app.domain.models.itinerary import Itinerary
 from app.domain.models.trip import Trip
 from app.application.schemas.itinerary import ItineraryCreate, ItineraryUpdate
+
+
+class ConflictError(Exception):
+    pass
 
 
 class ItineraryService:
@@ -60,7 +65,11 @@ class ItineraryService:
             data={"days": [d.model_dump() for d in data.days]},
         )
         self.session.add(itinerary)
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise ConflictError(f"An itinerary named '{data.name}' already exists for this trip")
         await self.session.refresh(itinerary)
         return itinerary
 
@@ -99,7 +108,11 @@ class ItineraryService:
 
         itinerary.updated_at = datetime.now(timezone.utc)
         self.session.add(itinerary)
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            raise ConflictError(f"An itinerary named '{data.name}' already exists for this trip")
         await self.session.refresh(itinerary)
         return itinerary
 
@@ -119,7 +132,7 @@ class ItineraryService:
         await self.session.commit()
 
     async def delete(self, itinerary_id: int, user_id: int) -> None:
-        itinerary = self._get_own_itinerary(itinerary_id, user_id)
+        itinerary = await self._get_own_itinerary(itinerary_id, user_id)
 
         await self.session.delete(itinerary)
         await self.session.commit()
