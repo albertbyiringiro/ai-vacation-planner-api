@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.core.config import get_settings
 from app.api.v1 import auth, trip, itinerary
+from app.middleware.auth import AuthMiddleware
 
 
 @asynccontextmanager
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
+    app.add_middleware(AuthMiddleware)
 
     @app.get("/health", tags=["health"])
     async def health_check() -> dict[str, str]:  # type: ignore

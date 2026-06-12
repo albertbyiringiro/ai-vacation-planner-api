@@ -13,14 +13,15 @@ class ConflictError(Exception):
 
 
 class ItineraryService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, user_id: int) -> None:
         self.session = session
+        self.user_id = user_id
 
-    async def _get_own_trip(self, trip_id: int, user_id: int) -> Trip:
+    async def _get_own_trip(self, trip_id: int) -> Trip:
         result = await self.session.execute(
             select(Trip).where(
                 Trip.id == trip_id,
-                Trip.user_id == user_id,
+                Trip.user_id == self.user_id,
                 Trip.deleted_at == None,
             )
         )
@@ -29,7 +30,7 @@ class ItineraryService:
             raise KeyError("Trip not found or access denied")
         return trip
 
-    async def _get_own_itinerary(self, itinerary_id: int, user_id: int) -> Itinerary:
+    async def _get_own_itinerary(self, itinerary_id: int) -> Itinerary:
         result = await self.session.execute(
             select(Itinerary).where(Itinerary.id == itinerary_id)
         )
@@ -37,18 +38,16 @@ class ItineraryService:
         itinerary = result.scalar_one_or_none()
         if itinerary is None:
             raise KeyError("Itinerary not found")
-        await self._get_own_trip(itinerary.trip_id, user_id)
+        await self._get_own_trip(itinerary.trip_id)
         return itinerary
 
-    async def create(
-        self, trip_id: int, user_id: int, data: ItineraryCreate
-    ) -> Itinerary:
+    async def create(self, trip_id: int, data: ItineraryCreate) -> Itinerary:
         """
         Create a new itinerary for a given trip.
         Validates that all days in the itinerary fit within the trip duration
         and that there are no duplicate day numbers.
         """
-        trip = await self._get_own_trip(trip_id, user_id)
+        trip = await self._get_own_trip(trip_id)
 
         day_numbers = [d.day for d in data.days]
         if max(day_numbers) > trip.days:
@@ -69,31 +68,31 @@ class ItineraryService:
             await self.session.commit()
         except IntegrityError:
             await self.session.rollback()
-            raise ConflictError(f"An itinerary named '{data.name}' already exists for this trip")
+            raise ConflictError(
+                f"An itinerary named '{data.name}' already exists for this trip"
+            )
         await self.session.refresh(itinerary)
         return itinerary
 
     async def list_for_trip(
-        self, trip_id: int, user_id: int, active_only: bool = False
+        self, trip_id: int, active_only: bool = False
     ) -> list[Itinerary]:
         """Fetch itineraries belonging to a trip. If active_only=True, return only the active itinerary."""
-        await self._get_own_trip(trip_id, user_id)
+        await self._get_own_trip(trip_id)
         stmt = select(Itinerary).where(Itinerary.trip_id == trip_id)
         if active_only:
             stmt = stmt.where(Itinerary.is_active == True)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get(self, itinerary_id: int, user_id: int) -> Itinerary:
-        return await self._get_own_itinerary(itinerary_id, user_id)
+    async def get(self, itinerary_id: int) -> Itinerary:
+        return await self._get_own_itinerary(itinerary_id)
 
-    async def update(
-        self, itinerary_id: int, user_id: int, data: ItineraryUpdate
-    ) -> Itinerary:
-        itinerary = await self._get_own_itinerary(itinerary_id, user_id)
+    async def update(self, itinerary_id: int, data: ItineraryUpdate) -> Itinerary:
+        itinerary = await self._get_own_itinerary(itinerary_id)
 
         if data.days is not None:
-            trip = await self._get_own_trip(itinerary.trip_id, user_id)
+            trip = await self._get_own_trip(itinerary.trip_id)
             day_numbers = [d.day for d in data.days]
             if max(day_numbers) > trip.days:
                 raise ValueError(
@@ -112,13 +111,15 @@ class ItineraryService:
             await self.session.commit()
         except IntegrityError:
             await self.session.rollback()
-            raise ConflictError(f"An itinerary named '{data.name}' already exists for this trip")
+            raise ConflictError(
+                f"An itinerary named '{data.name}' already exists for this trip"
+            )
         await self.session.refresh(itinerary)
         return itinerary
 
-    async def activate(self, itinerary_id: int, user_id: int) -> None:
+    async def activate(self, itinerary_id: int) -> None:
         """Set the given itinerary as the active one for its trip, deactivating all others."""
-        itinerary = await self._get_own_itinerary(itinerary_id, user_id)
+        itinerary = await self._get_own_itinerary(itinerary_id)
 
         await self.session.execute(
             update(Itinerary)
@@ -131,8 +132,8 @@ class ItineraryService:
         self.session.add(itinerary)
         await self.session.commit()
 
-    async def delete(self, itinerary_id: int, user_id: int) -> None:
-        itinerary = await self._get_own_itinerary(itinerary_id, user_id)
+    async def delete(self, itinerary_id: int) -> None:
+        itinerary = await self._get_own_itinerary(itinerary_id)
 
         await self.session.delete(itinerary)
         await self.session.commit()

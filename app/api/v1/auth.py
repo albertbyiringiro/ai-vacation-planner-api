@@ -7,7 +7,8 @@ from app.core.database import SessionDep
 from app.application.schemas.user import UserCreate, UserResponse, Token
 from app.application.services.user import UserService
 from app.domain.models.user import User
-from app.core.security import create_access_token, authenticate_user, CurrentUser
+from app.core.security import create_access_token, authenticate_user
+from app.middleware.auth import CurrentUser
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -28,7 +29,7 @@ UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 async def register(
     user_data: UserCreate,
     service: UserServiceDep,
-) -> User:  # We return the table model; response_model filters out hashed_password
+) -> User:
     try:
         return await service.create_user(user_data)
     except ValueError as e:
@@ -57,6 +58,11 @@ async def login(
     return Token(access_token=access_token)
 
 
-@router.post("/auth/me", response_model=UserResponse)
-async def read_me(current_user: CurrentUser) -> User:
-    return current_user
+@router.get("/me", response_model=UserResponse)
+async def read_me(current_user: CurrentUser) -> UserResponse:
+    return UserResponse(
+        id=current_user.id,
+        username=current_user.username,
+        email=current_user.email,
+        is_active=current_user.is_active,
+    )

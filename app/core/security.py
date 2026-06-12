@@ -1,10 +1,8 @@
 from pwdlib import PasswordHash
 from datetime import datetime, timedelta, timezone
-from typing import Any, Annotated
+from typing import Any
 import jwt
 from sqlalchemy import select
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 
 from app.core.config import get_settings
@@ -12,8 +10,6 @@ from app.core.database import SessionDep
 from app.domain.models.user import User
 
 password_hash = PasswordHash.recommended()
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 def hash_password(plain: str) -> str:
@@ -45,6 +41,18 @@ def create_access_token(
     )
 
 
+def decode_access_token(token: str) -> dict[str, Any]:
+    settings = get_settings()
+    try:
+        return jwt.decode(  # type: ignore
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm],
+        )
+    except InvalidTokenError as exc:
+        raise ValueError("Could not validate credentials") from exc
+
+
 async def authenticate_user(
     session: SessionDep, username: str, password: str
 ) -> User | None:
@@ -52,68 +60,9 @@ async def authenticate_user(
 
     user = result.scalar_one_or_none()
 
-    if not user:
+    if not user or not user.is_active or user.deleted_at is not None:
         return None
     if not verify_password(password, user.hashed_password):
         return None
 
     return user
-
-
-async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], session: SessionDep
-) -> User:
-    settings = get_settings()
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    try:
-        payload = jwt.decode(  # type: ignore
-            token,
-            settings.secret_key,
-            algorithms=[settings.algorithm],
-        )
-        username: str | None = payload.get("sub")
-
-        if username is None:
-            raise credentials_exception
-
-    except InvalidTokenError:
-        raise credentials_exception
-
-    result = await session.execute(select(User).filter_by(username=username))
-
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        raise credentials_exception
-
-    return user
-
-
-async def get_current_active_user(
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user",
-        )
-
-    return current_user
-
-
-CurrentUser = Annotated[User, Depends(get_current_active_user)]
-
-
-async def get_current_user_id(current_user: CurrentUser):
-    if current_user.id is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
-
-    return current_user.id
-
-
-UserId = Annotated[int, Depends(get_current_user_id)]

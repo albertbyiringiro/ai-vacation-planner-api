@@ -55,7 +55,7 @@ HTTP Request
 ┌─────────────────────────────┐
 │        Core Layer           │  app/core/
 │  Config, DB session,        │  config.py · database.py · security.py
-│  JWT / auth dependencies    │
+│  JWT / auth middleware      │
 └─────────────────────────────┘
 ```
 

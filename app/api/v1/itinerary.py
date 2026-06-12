@@ -1,19 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.database import SessionDep
-from app.core.security import UserId
 from app.application.schemas.itinerary import (
     ItineraryCreate,
     ItineraryResponse,
     ItineraryUpdate,
 )
 from app.application.services.itinerary import ConflictError, ItineraryService
+from app.middleware.auth import CurrentUserId
 
 router = APIRouter(tags=["itineraries"])
 
 
-def get_service(session: SessionDep) -> ItineraryService:
-    return ItineraryService(session)
+def get_service(session: SessionDep, user_id: CurrentUserId) -> ItineraryService:
+    return ItineraryService(session, user_id)
 
 
 @router.post(
@@ -24,11 +24,10 @@ def get_service(session: SessionDep) -> ItineraryService:
 async def create_itinerary(
     trip_id: int,
     body: ItineraryCreate,
-    user_id: UserId,
     service: ItineraryService = Depends(get_service),
 ):
     try:
-        return await service.create(trip_id, user_id, body)
+        return await service.create(trip_id, body)
     except KeyError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
@@ -45,12 +44,11 @@ async def create_itinerary(
 )
 async def list_itineraries(
     trip_id: int,
-    user_id: UserId,
     active_only: bool = Query(default=False),
     service: ItineraryService = Depends(get_service),
 ):
     try:
-        return await service.list_for_trip(trip_id, user_id, active_only)
+        return await service.list_for_trip(trip_id, active_only)
     except KeyError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
@@ -63,11 +61,10 @@ async def list_itineraries(
 )
 async def get_itinerary(
     itinerary_id: int,
-    user_id: UserId,
     service: ItineraryService = Depends(get_service),
 ):
     try:
-        return await service.get(itinerary_id, user_id)
+        return await service.get(itinerary_id)
     except KeyError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
@@ -81,11 +78,10 @@ async def get_itinerary(
 async def update_itinerary(
     itinerary_id: int,
     body: ItineraryUpdate,
-    user_id: UserId,
     service: ItineraryService = Depends(get_service),
 ):
     try:
-        return await service.update(itinerary_id, user_id, body)
+        return await service.update(itinerary_id, body)
     except KeyError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
@@ -102,11 +98,10 @@ async def update_itinerary(
 )
 async def activate_itinerary(
     itinerary_id: int,
-    user_id: UserId,
     service: ItineraryService = Depends(get_service),
 ):
     try:
-        await service.activate(itinerary_id, user_id)
+        await service.activate(itinerary_id)
     except KeyError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
@@ -119,11 +114,10 @@ async def activate_itinerary(
 )
 async def delete_itinerary(
     itinerary_id: int,
-    user_id: UserId,
     service: ItineraryService = Depends(get_service),
 ):
     try:
-        await service.delete(itinerary_id, user_id)
+        await service.delete(itinerary_id)
     except KeyError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except PermissionError as e:
